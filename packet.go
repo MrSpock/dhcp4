@@ -40,6 +40,12 @@ func (p Packet) CHAddr() net.HardwareAddr {
 	return net.HardwareAddr(p[28 : 28+hLen]) // max endPos 44
 }
 
+// func (p Packet) ToJSON() string {
+// 	var json string = `{"CIAddr": %s", "SIAddr": "%s", "YIAddr": "%s", "GIAddr": "%s", "CHAddr": "%s", "OpCode": "%v"}
+// 	`
+// 	return fmt.Sprintf(json, p.CIAddr(), p.SIAddr(), p.YIAddr(), p.GIAddr(), p.CHAddr(), p.OpCode())
+// }
+
 // 192 bytes of zeros BOOTP legacy
 
 // BOOTP legacy

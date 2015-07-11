@@ -1,8 +1,11 @@
 // Example of minimal DHCP server:
-package dhcp4_test
+package main
 
 import (
-	dhcp "github.com/krolaw/dhcp4"
+	"fmt"
+	"os"
+
+	dhcp "github.com/mrspock/dhcp4"
 
 	"log"
 	"math/rand"
@@ -11,23 +14,6 @@ import (
 )
 
 // Example using DHCP with a single network interface device
-func ExampleHandler() {
-	serverIP := net.IP{172, 30, 0, 1}
-	handler := &DHCPHandler{
-		ip:            serverIP,
-		leaseDuration: 2 * time.Hour,
-		start:         net.IP{172, 30, 0, 2},
-		leaseRange:    50,
-		leases:        make(map[int]lease, 10),
-		options: dhcp.Options{
-			dhcp.OptionSubnetMask:       []byte{255, 255, 240, 0},
-			dhcp.OptionRouter:           []byte(serverIP), // Presuming Server is also your router
-			dhcp.OptionDomainNameServer: []byte(serverIP), // Presuming Server is also your DNS server
-		},
-	}
-	log.Fatal(dhcp.ListenAndServe(handler))
-	// log.Fatal(dhcp.ListenAndServeIf("eth0",handler)) // Select interface on multi interface device
-}
 
 type lease struct {
 	nic    string    // Client's CHAddr
@@ -44,9 +30,17 @@ type DHCPHandler struct {
 }
 
 func (h *DHCPHandler) ServeDHCP(p dhcp.Packet, msgType dhcp.MessageType, options dhcp.Options) (d dhcp.Packet) {
+
+	// func reply() dhcp.ReplyPacket {
+	// 	offeredIP := dhcp.IPAdd(h.start, free)
+	// 	fmt.Printf("DHCP_REPLY: {\"hwaddr\":\"%s\", \"ipaddr\": \"%s\"}\n", p.CHAddr().String(), offeredIP)
+	// 	return dhcp.ReplyPacket(p, dhcp.Offer, h.ip, offeredIP, h.leaseDuration,
+	// 		h.options.SelectOrderOrAll(options[dhcp.OptionParameterRequestList]))
+	// }
 	switch msgType {
 
 	case dhcp.Discover:
+		//fmt.Println("Processing packet:", p.ToJSON())
 		free, nic := -1, p.CHAddr().String()
 		for i, v := range h.leases { // Find previous lease
 			if v.nic == nic {
@@ -58,8 +52,14 @@ func (h *DHCPHandler) ServeDHCP(p dhcp.Packet, msgType dhcp.MessageType, options
 			return
 		}
 	reply:
+		fmt.Println("Sending response")
 		return dhcp.ReplyPacket(p, dhcp.Offer, h.ip, dhcp.IPAdd(h.start, free), h.leaseDuration,
 			h.options.SelectOrderOrAll(options[dhcp.OptionParameterRequestList]))
+	// reply:
+	// 	offeredIP := dhcp.IPAdd(h.start, free)
+	// 	//fmt.Printf("DHCP_REPLY: {\"hwaddr\":\"%s\", \"ipaddr\": \"%s\"}\n", p.CHAddr().String(), offeredIP)
+	// 	return dhcp.ReplyPacket(p, dhcp.Offer, h.ip, offeredIP, h.leaseDuration,
+	// 		h.options.SelectOrderOrAll(options[dhcp.OptionParameterRequestList]))
 
 	case dhcp.Request:
 		if server, ok := options[dhcp.OptionServerIdentifier]; ok && !net.IP(server).Equal(h.ip) {
@@ -104,4 +104,25 @@ func (h *DHCPHandler) freeLease() int {
 		}
 	}
 	return -1
+}
+
+func main() {
+	l := log.New(os.Stdout, "dhcpd ", log.LstdFlags)
+	serverIP := net.IP{172, 30, 0, 1}
+	handler := &DHCPHandler{
+		ip:            serverIP,
+		leaseDuration: 2 * time.Hour,
+		start:         net.IP{172, 30, 0, 2},
+		leaseRange:    50,
+		leases:        make(map[int]lease, 20),
+		options: dhcp.Options{
+			dhcp.OptionSubnetMask:       []byte{255, 255, 255, 0},
+			dhcp.OptionRouter:           []byte(serverIP), // Presuming Server is also your router
+			dhcp.OptionDomainNameServer: []byte(serverIP), // Presuming Server is also your DNS server
+			dhcp.OptionBootFileName:     []byte("default.bin"),
+		},
+	}
+	l.Println("Handler:", handler)
+	l.Fatal(dhcp.ListenAndServeIf("en6", handler))
+	// log.Fatal(dhcp.ListenAndServeIf("eth0",handler)) // Select interface on multi interface device
 }
