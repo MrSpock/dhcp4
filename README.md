@@ -1,7 +1,7 @@
 # DHCP4 - A DHCP library written in Go.
 
 ## Info
-This code is fork of http://godoc.org/github.com/krolaw/dhcp4 for future modification and integration as provisioning server based on docsis
+This code is fork of http://godoc.org/github.com/krolaw/dhcp4 for future modification and integral part of provisioning system for DOCSIS network.
 
 ## Author
 Marcin 'Spock' Jurczuk 
